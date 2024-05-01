@@ -1,0 +1,41 @@
+Select * from WTAResult limit 5;
+
+--- A8.sql
+SELECT yr AS year, COUNT(winnerName) AS matches_won
+FROM WTAResult
+WHERE winnerCountry = 'AUS'
+GROUP BY yr
+ORDER BY yr;
+
+--- A9.sql
+SELECT
+    orderNumber,
+    COUNT(productCode) AS line_item_count,
+    ROUND(SUM(priceEach * quantityOrdered), 2) AS total_cost
+FROM orderdetails
+GROUP BY orderNumber
+ORDER BY total_cost DESC;
+
+
+--- A10.sql
+SELECT
+    winnerName AS player_name,
+    COUNT(*) AS matches_won,
+    ROUND(AVG(minutes), 2) AS avg_match_length
+FROM ATPResult
+WHERE winnerCountry = 'AUS'
+GROUP BY winnerName
+HAVING matches_won >= 10
+ORDER BY avg_match_length;
+
+
+---A11.sql
+SELECT
+    od.orderNumber,
+    p.productLine,
+    COUNT(*) AS line_item_count,
+    ROUND(SUM(od.priceEach * od.quantityOrdered), 2) AS total_cost
+FROM orderdetails od
+JOIN products p ON od.productCode = p.productCode
+GROUP BY od.orderNumber, p.productLine
+ORDER BY od.orderNumber, p.productLine;

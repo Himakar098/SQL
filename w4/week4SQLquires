@@ -1,0 +1,36 @@
+--3 (A4.sql)
+SELECT people.name, castmembers.characters 
+FROM people JOIN castmembers 
+ON people.person_id=castmembers.person_id 
+WHERE castmembers.title_id='tt0172495';
+
+--4
+select titles.title,ratings.rating 
+from titles JOIN ratings 
+ON titles.title_id=ratings.title_id 
+where ratings.rating>8.5;
+
+--5 (A5.sql)
+select titles.title,ratings.rating, ratings.votes 
+from titles JOIN ratings ON titles.title_id=ratings.title_id 
+where ratings.votes>1000000 ORDER BY rating DESC;
+
+--6
+select titles.title,people.name 
+from crewmembers JOIN titles ON titles.title_id=crewmembers.title_id 
+JOIN people ON people.person_id=crewmembers.person_id 
+where crewmembers.category='director';
+
+--9 (A6.sql)
+SELECT MIN(runtime_minutes) 
+AS shortest,MAX(runtime_minutes) 
+AS longest, AVG(runtime_minutes) AS average FROM TITLES;
+
+--10
+SELECT title,(runtime_minutes / 60) AS hours,runtime_minutes % 60 AS minutes from titles;
+
+--12 (A7.sql)
+SELECT titles.title,people.name 
+from titles JOIN castmembers ON titles.title_id=castmembers.title_id 
+JOIN people ON castmembers.person_id=people.person_id 
+JOIN ratings ON titles.title_id=ratings.title_id where ratings.rating>=9;

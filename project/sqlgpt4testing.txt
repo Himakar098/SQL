@@ -1,0 +1,3 @@
+### Phone Table:
+CREATE TABLE Phone (modelNumber TEXT, modelName TEXT, IMEI TEXT UNIQUE);
+

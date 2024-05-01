@@ -1,0 +1,92 @@
+-- 2nd ques
+
+-- Create a trigger on rentalContract table
+CREATE TRIGGER calculateRentalCost
+AFTER UPDATE ON rentalContract
+FOR EACH ROW
+WHEN NEW.dateBack IS NOT NULL AND OLD.dateBack IS NULL
+BEGIN
+  -- Calculate the number of days between dateOut and dateBack
+  UPDATE rentalContract
+  SET rentalCost = (
+    SELECT (
+      julianday(NEW.dateBack) - julianday(OLD.dateOut) + 1
+    ) * (
+      SELECT dailyCost
+      FROM PhoneModel
+      WHERE PhoneModel.modelNumber = (
+        SELECT modelNumber
+        FROM Phone
+        WHERE Phone.IMEI = NEW.IMEI
+      )
+    ) + (
+      SELECT baseCost
+      FROM PhoneModel
+      WHERE PhoneModel.modelNumber = (
+        SELECT modelNumber
+        FROM Phone
+        WHERE Phone.IMEI = NEW.IMEI
+      )
+    )
+  )
+  WHERE rentalContract.customerId = NEW.customerId
+    AND rentalContract.IMEI = NEW.IMEI
+    AND rentalContract.dateBack IS NULL;
+END;
+
+-- 3rd ques
+
+-- Create a view CustomerSummary
+CREATE VIEW CustomerSummary AS
+SELECT
+  rc.customerId AS customerId,
+  pm.modelName AS modelName,
+  CAST(julianday(rc.dateBack) - julianday(rc.dateOut) + 1 AS INTEGER) AS daysRented,
+  CASE
+    WHEN strftime('%m', rc.dateBack) >= '07' THEN
+      strftime('%Y', rc.dateBack) || '/' || strftime('%Y', rc.dateBack, '+1 year')
+    ELSE
+      strftime('%Y', rc.dateBack, '-1 year') || '/' || strftime('%Y', rc.dateBack)
+  END AS taxYear,
+  (
+    (
+      CAST(julianday(rc.dateBack) - julianday(rc.dateOut) + 1 AS INTEGER) - 1
+    ) * pm.dailyCost
+  ) + pm.baseCost AS rentalCost
+FROM rentalContract AS rc
+JOIN Phone AS p ON rc.IMEI = p.IMEI
+JOIN PhoneModel AS pm ON p.modelNumber = pm.modelNumber
+WHERE rc.dateBack IS NOT NULL;
+
+
+-- 2. Create a trigger to calculate rentalCost
+CREATE TRIGGER IF NOT EXISTS CalculateRentalCost
+AFTER UPDATE OF dateBack ON rentalContract
+BEGIN
+  -- Check if the update was done by the clerk
+  IF NEW.dateBack IS NOT NULL THEN
+    -- Calculate the rental cost
+    UPDATE rentalContract
+    SET rentalCost = (julianday(NEW.dateBack) - julianday(OLD.dateOut) + 1) * 
+                     (SELECT dailyCost FROM PhoneModel WHERE modelNumber = 
+                     (SELECT modelNumber FROM Phone WHERE IMEI = NEW.IMEI))
+    WHERE rowid = NEW.rowid;
+  END IF;
+END;
+
+-- 3. Create a view to summarize rental information for tax purposes
+CREATE VIEW IF NOT EXISTS CustomerSummary AS
+SELECT rc.customerId, pm.modelNumber, 
+       CAST(julianday(rc.dateBack) - julianday(rc.dateOut) + 1 AS INTEGER) AS daysRented,
+       CASE
+         WHEN strftime('%m', rc.dateBack) >= '07' THEN strftime('%Y', rc.dateBack) || '/' || 
+                                                      strftime('%Y', rc.dateBack, '+1 year')
+         ELSE strftime('%Y', rc.dateBack, '-1 year') || '/' || strftime('%Y', rc.dateBack)
+       END AS taxYear,
+       (julianday(rc.dateBack) - julianday(rc.dateOut) + 1) * 
+       (SELECT dailyCost FROM PhoneModel WHERE modelNumber = 
+       (SELECT modelNumber FROM Phone WHERE IMEI = rc.IMEI)) AS rentalCost
+FROM rentalContract rc
+INNER JOIN Phone p ON rc.IMEI = p.IMEI
+INNER JOIN PhoneModel pm ON p.modelNumber = pm.modelNumber
+WHERE rc.dateBack IS NOT NULL;

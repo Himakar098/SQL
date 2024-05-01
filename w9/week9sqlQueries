@@ -1,0 +1,115 @@
+select * from castmembers;
+select * from crewmembers;
+select * from people;
+select * from ratings;
+select * from titles;
+
+-- ques 1:
+SELECT category, COUNT(*) AS category_count
+FROM crewmembers
+GROUP BY category;
+
+-- q2
+SELECT category, COUNT(DISTINCT person_id) AS person_count
+FROM crewmembers
+GROUP BY category;
+
+-- q3 a12.sql
+SELECT premiered AS year,COUNT(*) AS movie_count
+FROM titles
+GROUP BY premiered
+ORDER BY movie_count DESC, premiered DESC;
+
+-- q4
+SELECT p.*
+FROM people p
+WHERE p.name IN (
+    SELECT name
+    FROM people
+    GROUP BY name
+    HAVING COUNT(*) > 1
+);
+
+-- q5
+SELECT DISTINCT
+    p.person_id,
+    p.name,
+    cm.category
+FROM crewmembers cm
+JOIN people p ON cm.person_id = p.person_id
+WHERE
+    p.person_id IN (
+        SELECT
+            person_id
+        FROM
+            crewmembers
+        GROUP BY
+            person_id
+        HAVING
+            COUNT(DISTINCT category) > 1
+    )
+ORDER BY
+    p.person_id, cm.category;
+
+-- q6
+SELECT COUNT(*) AS living_count
+FROM people
+WHERE born IS NOT NULL
+  AND died IS NULL;
+  
+-- q7
+SELECT
+    t.title AS movie_title,
+    cm.category,
+    COUNT(cm.person_id) AS crew_count
+FROM titles t
+INNER JOIN crewmembers cm ON t.title_id = cm.title_id
+GROUP BY t.title, cm.category
+ORDER BY t.title, cm.category;
+    
+-- q8
+SELECT t.title AS movie_title,
+    cm.category, COUNT(*) AS crew_count
+FROM title t
+LEFT JOIN crewmembers cm ON t.title_id = cm.title_id
+GROUP BY t.title, cm.category
+HAVING COUNT(*) > 0
+ORDER BY t.title, cm.category;
+
+-- q9 a13.sql
+SELECT
+    ROUND(runtime_minutes / 60.0) AS hours,
+    COUNT(*) AS movie_count
+FROM titles
+GROUP BY hours
+ORDER BY hours;
+
+-- q10 a14.sql
+SELECT decade,
+    title AS movie_title,
+    rating AS movie_rating
+FROM (
+    SELECT
+        CAST((CAST(SUBSTR(premiered, 1, 4) AS INTEGER) / 10) * 10 AS TEXT) || 's' AS decade,
+        title, rating,
+        RANK() OVER (PARTITION BY CAST((CAST(SUBSTR(premiered, 1, 4) AS INTEGER) / 10) * 10 AS TEXT) || 's' ORDER BY rating DESC) AS rank
+    FROM titles
+    JOIN ratings ON titles.title_id = ratings.title_id
+) ranked_movies
+WHERE rank = 1
+ORDER BY decade;
+
+-- q11 a15.sql
+SELECT p.person_id, p.name,
+    COUNT(DISTINCT cm.title_id) AS top250_movie_count
+FROM people p
+JOIN castmembers cm ON p.person_id = cm.person_id
+WHERE cm.title_id IN (
+        SELECT title_id
+        FROM titles
+        WHERE title_id IN (
+                SELECT title_id
+                FROM ratings
+                WHERE rating >= 8.0))
+GROUP BY p.person_id, p.name
+ORDER BY top250_movie_count DESC, p.person_id;
